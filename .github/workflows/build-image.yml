@@ -28,20 +28,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        STREAM: [testing-devel, stable]
+        STREAM: [42]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
-      - name: Podman Login to Quay
-        # This step uses the secret and is executed before pushing
-        run: |
-          # Use "echo" and pipe the secret to "podman login --password-stdin"
-          # This avoids exposing the secret in command logs.
-          echo "$PASSWORD" | podman login --username $USERNAME --password-stdin quay.io
-        env:
-          USERNAME: "${{ secrets.QUAY_USERNAME }}"
-          PASSWORD: "${{ secrets.QUAY_TOKEN }}"
 
       - name: Build the builder image
         run: |
@@ -59,10 +49,3 @@ jobs:
           NVIDIA_DRIVER_VERSION=$(grep -e "^DRIVER_VERSION" build-args.conf | cut -d= -f2)
           FINAL_IMAGE_TAG="${{ matrix.STREAM }}-${NVIDIA_DRIVER_VERSION}"
           podman run --rm $FINAL_IMAGE:$FINAL_IMAGE_TAG echo hello
-
-      - name: Push image to Quay
-        if: github.event_name == 'push' || github.event_name == 'schedule'
-        run: |
-          NVIDIA_DRIVER_VERSION=$(grep -e "^DRIVER_VERSION" build-args.conf | cut -d= -f2)
-          FINAL_IMAGE_TAG="${{ matrix.STREAM }}-${NVIDIA_DRIVER_VERSION}"
-          podman push $FINAL_IMAGE:$FINAL_IMAGE_TAG
